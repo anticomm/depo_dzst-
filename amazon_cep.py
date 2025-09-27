@@ -62,14 +62,26 @@ def get_price_from_detail(driver, url):
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
 
-        # Normal ürün sayfasında fiyat araması
-        price_elements = driver.find_elements(By.CSS_SELECTOR, ".aok-offscreen")
-        for el in price_elements:
-            text = el.get_attribute("innerText").strip()
-            if "TL" in text and any(char.isdigit() for char in text):
-                return text
+        # 1️⃣ Fiyatı doğrudan sayfada ara (öncelikli selektörler)
+        price_selectors = [
+            "span.a-color-base",
+            "span.a-size-base.a-color-price.offer-price.a-text-normal",
+            ".aok-offscreen",
+            "span.a-price-whole"
+        ]
 
-        # Eğer fiyat bulunamadıysa → satın alma seçenekleri sayfasına git
+        for selector in price_selectors:
+            try:
+                price_elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                for el in price_elements:
+                    text = el.get_attribute("innerText").strip()
+                    if "TL" in text and any(char.isdigit() for char in text):
+                        print(f"✅ Doğrudan fiyat bulundu: {text}")
+                        return text
+            except:
+                continue
+
+        # 2️⃣ Fiyat bulunamazsa → ürün linkine tıklanmış zaten, satın alma seçeneklerine geç
         try:
             offer_link = driver.find_element(By.CSS_SELECTOR, "a.a-button-text[title*='Satın Alma Seçeneklerini Gör']")
             offer_url = offer_link.get_attribute("href")
@@ -77,16 +89,24 @@ def get_price_from_detail(driver, url):
                 if offer_url.startswith("/"):
                     offer_url = "https://www.amazon.com.tr" + offer_url
                 driver.get(offer_url)
-                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".aok-offscreen")))
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
                 time.sleep(1)
-                offer_prices = driver.find_elements(By.CSS_SELECTOR, ".aok-offscreen")
-                for el in offer_prices:
-                    text = el.get_attribute("innerText").strip()
-                    if "TL" in text and any(char.isdigit() for char in text):
-                        return text
+
+                # Satın alma sayfasında tekrar fiyat ara
+                for selector in price_selectors:
+                    try:
+                        offer_prices = driver.find_elements(By.CSS_SELECTOR, selector)
+                        for el in offer_prices:
+                            text = el.get_attribute("innerText").strip()
+                            if "TL" in text and any(char.isdigit() for char in text):
+                                print(f"✅ Satın alma sayfasında fiyat bulundu: {text}")
+                                return text
+                    except:
+                        continue
         except Exception as e:
             print(f"⚠️ Satın alma seçenekleri sayfası hatası: {e}")
 
+        print("❌ Fiyat alınamadı.")
         return "Fiyat alınamadı"
     except Exception as e:
         print(f"⚠️ Detay sayfasından fiyat alınamadı: {e}")
