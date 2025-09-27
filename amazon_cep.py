@@ -229,4 +229,4 @@ def run():
     else:
         print("⚠️ Yeni veya indirimli ürün bulunamadı.")
     if __name__ == "__main__":
-    run()
+        run()
