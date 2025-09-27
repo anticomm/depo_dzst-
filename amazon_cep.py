@@ -77,11 +77,14 @@ def extract_price_from_selectors(driver_or_item, selectors):
 def get_offer_listing_link(driver):
     try:
         el = driver.find_element(By.XPATH, "//a[contains(@href, '/gp/offer-listing/')]")
-        return "https://www.amazon.com.tr" + el.get_attribute("href")
+        href = el.get_attribute("href")
+        if href.startswith("/"):
+            return "https://www.amazon.com.tr" + href
+        return href
     except:
         return None
 
-def get_final_price(driver, item, link):
+def get_final_price(driver, item_or_none, link):
     price_selectors_category = [
         ".a-price .a-offscreen",
         "span.a-color-base",
@@ -99,24 +102,36 @@ def get_final_price(driver, item, link):
         "span.a-price-whole"
     ]
 
-    price = extract_price_from_selectors(item, price_selectors_category)
-    if price:
-        return price
+    if item_or_none:
+        price = extract_price_from_selectors(item_or_none, price_selectors_category)
+        if price:
+            return price
 
-    driver.get(link)
-    WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-    time.sleep(2)
+    try:
+        if not link.startswith("http"):
+            link = "https://www.amazon.com.tr" + link
+        driver.get(link)
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+        time.sleep(2)
+    except Exception as e:
+        print(f"⚠️ Linke gidilemedi: {link} → {e}")
+        return None
+
     price = extract_price_from_selectors(driver, price_selectors_detail)
     if price:
         return price
 
     offer_link = get_offer_listing_link(driver)
     if offer_link:
-        driver.get(offer_link)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-        time.sleep(2)
-        price = extract_price_from_selectors(driver, price_selectors_offer)
-        return price
+        try:
+            driver.get(offer_link)
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+            time.sleep(2)
+            price = extract_price_from_selectors(driver, price_selectors_offer)
+            return price
+        except Exception as e:
+            print(f"⚠️ Teklif sayfası hatası: {e}")
+            return None
 
     return None
 def load_sent_data():
@@ -184,7 +199,7 @@ def run():
             })
 
         except Exception as e:
-            print("⚠️ Ürün parse hatası:", e)
+            print(f"⚠️ Ürün parse hatası: {e}")
             continue
 
     driver.quit()
