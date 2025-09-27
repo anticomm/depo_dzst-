@@ -63,7 +63,10 @@ def extract_price_from_selectors(driver_or_item, selectors):
             elements = driver_or_item.find_elements(By.CSS_SELECTOR, selector)
             for el in elements:
                 text = el.get_attribute("innerText") or el.text
-                text = text.strip().replace("\xa0", " ").replace("TL", " TL").strip()
+                if not text:
+                    continue
+                text = text.replace("\xa0", " ").replace("TL", " TL").strip()
+                text = re.sub(r"\s+", " ", text)
 
                 if any(x in text.lower() for x in ["puan", "teslimat", "sipariş", "beğenilen", "kargo", "teklif"]):
                     continue
@@ -73,7 +76,6 @@ def extract_price_from_selectors(driver_or_item, selectors):
         except:
             continue
     return None
-
 def get_offer_listing_link(driver):
     try:
         el = driver.find_element(By.XPATH, "//a[contains(@href, '/gp/offer-listing/')]")
