@@ -192,14 +192,14 @@ def run():
         asin = product["asin"]
         price = product["price"].strip()
 
-if asin in sent_data:
-    old_price = sent_data[asin]
+        if asin in sent_data:
+            old_price = sent_data[asin]
 
-    # Geçersiz eski fiyat varsa → yeni fiyatla güncelle ve karşılaştırma yapma
-    if "Fiyat alınamadı" in old_price or "Kargo BEDAVA" in old_price:
-        print(f"🆕 Önceki fiyat geçersizdi, güncellendi: {product['title']} → {price}")
-        sent_data[asin] = price
-        continue
+            # Geçersiz eski fiyat varsa → yeni fiyatla güncelle ve karşılaştırma yapma
+            if "Fiyat alınamadı" in old_price or "Kargo BEDAVA" in old_price:
+                print(f"🆕 Önceki fiyat geçersizdi, güncellendi: {product['title']} → {price}")
+                sent_data[asin] = price
+                continue
 
     try:
         old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
