@@ -220,4 +220,5 @@ def run():
                     print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
                     product["old_price"] = old_price
                     products_to_send.append(product)
-                else
+                else:
+                     print(...)
