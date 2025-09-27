@@ -70,21 +70,30 @@ def get_price_from_detail(driver, url):
             "span.a-price-whole"
         ]
 
-        for selector in price_selectors:
-            price_elements = driver.find_elements(By.CSS_SELECTOR, selector)
-            for el in price_elements:
-                text = el.get_attribute("innerText").strip()
-                if "TL" in text and any(char.isdigit() for char in text):
-                    if "Kargo BEDAVA" in text or "siparişlerde" in text:
-                        continue
-                    print(f"✅ Sayfada fiyat bulundu: {text}")
-                    return text
+for selector in price_selectors:
+    price_elements = driver.find_elements(By.CSS_SELECTOR, selector)
+    for el in price_elements:
+        text = el.get_attribute("innerText").strip()
 
-        print("❌ Fiyat alınamadı.")
-        return None
-    except Exception as e:
-        print(f"⚠️ Detay sayfa hatası: {e}")
-        return None
+        # Bozuk metinleri filtrele
+        if (
+            "\n" in text or
+            "teklif" in text or
+            "ile" in text or
+            "Kargo BEDAVA" in text or
+            "siparişlerde" in text or
+            len(text) > 20
+        ):
+            print(f"⚠️ Bozuk fiyat metni atlandı: {text}")
+            continue
+
+        # Format kontrolü: 1.234,56 TL veya 999,00 TL
+        if not re.search(r"\d{1,3}(\.\d{3})*,\d{2} TL", text) and not re.search(r"\d+,\d{2} TL", text):
+            print(f"⚠️ Format dışı fiyat atlandı: {text}")
+            continue
+
+        print(f"✅ Sayfada fiyat bulundu: {text}")
+        return text
 def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
