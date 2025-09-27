@@ -46,9 +46,9 @@ jobs:
       - name: 10 saniye bekle
         run: sleep 10
 
-      - name: Scraper B'yi tetikle
+      - name: Scraper'ı tetikle
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/anticomm/depo_dzst-/actions/workflows/scraperc.yml/dispatches \
+            https://api.github.com/repos/anticomm/depo_dzst-/actions/workflows/scraper.yml/dispatches \
             -d '{"ref":"${{ github.ref_name }}"}'
