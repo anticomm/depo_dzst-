@@ -51,4 +51,4 @@ jobs:
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/anticomm/dzst-/actions/workflows/scraperb.yml/dispatches \
-             -d '{"ref":"${{ github.ref_name }}"}'
+            -d '{"ref":"${{ github.ref_name }}"}'
