@@ -50,7 +50,7 @@ def load_cookies(driver):
 
 def get_driver():
     options = Options()
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--window-size=1920,1080")
@@ -84,12 +84,7 @@ def get_offer_listing_link(driver):
     except:
         return None
 
-def get_final_price(driver, item_or_none, link):
-    price_selectors_category = [
-        ".a-price .a-offscreen",
-        "span.a-color-base",
-        "span.a-price-whole"
-    ]
+def get_final_price(driver, link):
     price_selectors_detail = [
         ".aok-offscreen",
         "span.a-size-base.a-color-price.offer-price.a-text-normal",
@@ -102,38 +97,37 @@ def get_final_price(driver, item_or_none, link):
         "span.a-price-whole"
     ]
 
-    if item_or_none:
-        price = extract_price_from_selectors(item_or_none, price_selectors_category)
-        if price:
-            return price
-
     try:
-        if not link.startswith("http"):
-            link = "https://www.amazon.com.tr" + link
+        driver.execute_script("window.open('');")
+        driver.switch_to.window(driver.window_handles[1])
         driver.get(link)
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
-    except Exception as e:
-        print(f"⚠️ Linke gidilemedi: {link} → {e}")
-        return None
 
-    price = extract_price_from_selectors(driver, price_selectors_detail)
-    if price:
-        return price
+        price = extract_price_from_selectors(driver, price_selectors_detail)
+        if price:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            return price
 
-    offer_link = get_offer_listing_link(driver)
-    if offer_link:
-        try:
+        offer_link = get_offer_listing_link(driver)
+        if offer_link:
             driver.get(offer_link)
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
             time.sleep(2)
             price = extract_price_from_selectors(driver, price_selectors_offer)
-            return price
-        except Exception as e:
-            print(f"⚠️ Teklif sayfası hatası: {e}")
-            return None
 
-    return None
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
+        return price
+    except Exception as e:
+        print(f"⚠️ Sekme fallback hatası: {e}")
+        try:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+        except:
+            pass
+        return None
 def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
@@ -186,7 +180,15 @@ def run():
             link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
             image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
 
-            price = get_final_price(driver, item, link)
+            price = extract_price_from_selectors(item, [
+                ".a-price .a-offscreen",
+                "span.a-color-base",
+                "span.a-price-whole"
+            ])
+
+            if not price:
+                price = get_final_price(driver, link)
+
             if not price:
                 continue
 
