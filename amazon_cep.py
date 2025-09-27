@@ -218,17 +218,15 @@ if asin in sent_data:
     except:
         print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
         sent_data[asin] = price
-        continue
-
-    if new_val < old_val:
-        print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
-        product["old_price"] = old_price
-        products_to_send.append(product)
     else:
-        print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
-    sent_data[asin] = price
+        if new_val < old_val:
+            print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
+            product["old_price"] = old_price
+            products_to_send.append(product)
+        else:
+            print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
+        sent_data[asin] = price
 else:
     print(f"🆕 Yeni ürün: {product['title']}")
     products_to_send.append(product)
     sent_data[asin] = price
-        
