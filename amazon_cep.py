@@ -185,9 +185,9 @@ def run():
                "image": image,
                "price": price
            })
-       except Exception as e:
-           print("⚠️ Listeleme parse hatası:", e)
-           continue
+           except Exception as e:
+               print("⚠️ Listeleme parse hatası:", e)
+               continue
 
 
     products = []
