@@ -62,7 +62,19 @@ def get_price_from_detail(driver, url):
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
 
-        # 1️⃣ Sayfada fiyat varsa → hemen al
+        # 🔍 Diğer satın alma seçenekleri altında fiyat
+        try:
+            secenekler = driver.find_element(By.XPATH, "//span[contains(text(), 'Diğer satın alma seçenekleri')]")
+            parent = secenekler.find_element(By.XPATH, "..")
+            fiyat_span = parent.find_element(By.CSS_SELECTOR, "span.a-color-base")
+            fiyat = fiyat_span.text.strip()
+            if "TL" in fiyat and any(char.isdigit() for char in fiyat):
+                print(f"✅ Diğer satın alma seçenekleri altında fiyat bulundu: {fiyat}")
+                return fiyat
+        except:
+            pass
+
+        # 🔍 Sayfa üzerindeki klasik fiyat selektörleri
         price_selectors = [
             "span.a-color-base",
             "span.a-size-base.a-color-price.offer-price.a-text-normal",
@@ -78,7 +90,7 @@ def get_price_from_detail(driver, url):
                     print(f"✅ Sayfada fiyat bulundu: {text}")
                     return text
 
-        # 2️⃣ Fiyat yoksa → satın alma seçeneklerine geç
+        # 🔁 Satın alma seçeneklerine geç
         try:
             offer_link = driver.find_element(By.CSS_SELECTOR, "a.a-button-text[title*='Satın Alma Seçeneklerini Gör']")
             offer_url = offer_link.get_attribute("href")
@@ -104,7 +116,7 @@ def get_price_from_detail(driver, url):
         print("❌ Fiyat alınamadı.")
         return None
     except Exception as e:
-        print(f"⚠️ Detay sayfası hatası: {e}")
+        print(f"⚠️ Detay sayfa hatası: {e}")
         return None
 
 
@@ -150,28 +162,42 @@ def run():
     product_links = []
     for item in items:
         try:
-            # Sponsorlu ürün kontrolü
-            if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
-                continue  # sponsorluysa atla
+           if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
+               continue
 
-            asin = item.get_attribute("data-asin")
-            title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
-            link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
-            image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
-            product_links.append({
-                "asin": asin,
-                "title": title,
-                "link": link,
-                "image": image
-            })
-        except Exception as e:
-            print("⚠️ Listeleme parse hatası:", e)
-            continue
+           asin = item.get_attribute("data-asin")
+           title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
+           link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
+           image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
+
+           # 💰 Listeleme sayfasında fiyatı al
+           try:
+               whole = item.find_element(By.CLASS_NAME, "a-price-whole").text.strip()
+               fraction = item.find_element(By.CLASS_NAME, "a-price-fraction").text.strip()
+               price = f"{whole},{fraction} TL"
+           except:
+               price = None
+
+           product_links.append({
+               "asin": asin,
+               "title": title,
+               "link": link,
+               "image": image,
+               "price": price
+           })
+       except Exception as e:
+           print("⚠️ Listeleme parse hatası:", e)
+           continue
+
 
     products = []
     for product in product_links:
         try:
-            price = get_price_from_detail(driver, product["link"])
+            price = product.get("price")
+            if not price:
+                price = get_price_from_detail(driver, product["link"])
+            if not price or "Fiyat alınamadı" in price:
+                continue
             product["price"] = price
             products.append(product)
         except Exception as e:
