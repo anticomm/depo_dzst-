@@ -228,3 +228,5 @@ def run():
         print(f"📁 Dosya güncellendi: {len(products_to_send)} ürün eklendi/güncellendi.")
     else:
         print("⚠️ Yeni veya indirimli ürün bulunamadı.")
+    if __name__ == "__main__":
+    run()
