@@ -57,70 +57,68 @@ def get_driver():
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/115 Safari/537.36")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-def get_products_from_category(driver, url):
-    driver.get(url)
-    time.sleep(2)
-    WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
-    )
+def extract_price_from_selectors(driver_or_item, selectors):
+    for selector in selectors:
+        try:
+            elements = driver_or_item.find_elements(By.CSS_SELECTOR, selector)
+            for el in elements:
+                text = el.get_attribute("innerText") or el.text
+                text = text.strip().replace("\xa0", " ").replace("TL", " TL").strip()
 
-    items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
-    print(f"🔍 {len(items)} ürün bulundu.")
+                if any(x in text.lower() for x in ["puan", "teslimat", "sipariş", "beğenilen", "kargo", "teklif"]):
+                    continue
 
-    price_selectors = [
+                if re.search(r"\d{1,3}(\.\d{3})*,\d{2} TL", text):
+                    return text
+        except:
+            continue
+    return None
+
+def get_offer_listing_link(driver):
+    try:
+        el = driver.find_element(By.XPATH, "//a[contains(@href, '/gp/offer-listing/')]")
+        return "https://www.amazon.com.tr" + el.get_attribute("href")
+    except:
+        return None
+
+def get_final_price(driver, item, link):
+    price_selectors_category = [
         ".a-price .a-offscreen",
         "span.a-color-base",
         "span.a-price-whole"
     ]
+    price_selectors_detail = [
+        ".aok-offscreen",
+        "span.a-size-base.a-color-price.offer-price.a-text-normal",
+        "span.a-color-base",
+        "span.a-price-whole"
+    ]
+    price_selectors_offer = [
+        ".a-price .a-offscreen",
+        "span.a-color-price",
+        "span.a-price-whole"
+    ]
 
-    product_links = []
-    for item in items:
-        try:
-            if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
-                continue
+    price = extract_price_from_selectors(item, price_selectors_category)
+    if price:
+        return price
 
-            asin = item.get_attribute("data-asin")
-            if not asin:
-                continue
+    driver.get(link)
+    WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+    time.sleep(2)
+    price = extract_price_from_selectors(driver, price_selectors_detail)
+    if price:
+        return price
 
-            title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
-            link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
-            image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
+    offer_link = get_offer_listing_link(driver)
+    if offer_link:
+        driver.get(offer_link)
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+        time.sleep(2)
+        price = extract_price_from_selectors(driver, price_selectors_offer)
+        return price
 
-            price = None
-            for selector in price_selectors:
-                try:
-                    el = item.find_element(By.CSS_SELECTOR, selector)
-                    text = el.get_attribute("innerText").strip()
-                    text = text.replace("\n", "").replace("\r", "").replace("TL", " TL").strip()
-
-                    if any(x in text for x in ["Kargo", "teslimat", "puan", "teklif", "siparişlerde", "Yeni & İkinci El"]):
-                        print(f"⚠️ Bozuk fiyat metni atlandı: {text}")
-                        continue
-
-                    if not re.search(r"\d+,\d{2} TL", text):
-                        print(f"⚠️ Format dışı fiyat atlandı: {text}")
-                        continue
-
-                    print(f"✅ Sayfada fiyat bulundu: {text}")
-                    price = text
-                    break
-                except:
-                    continue
-
-            product_links.append({
-                "asin": asin,
-                "title": title,
-                "link": link,
-                "image": image,
-                "price": price
-            })
-
-        except Exception as e:
-            print("⚠️ Listeleme parse hatası:", e)
-            continue
-
-    return product_links
+    return None
 def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
@@ -147,38 +145,50 @@ def run():
     load_cookies(driver)
     driver.get(URL)
 
-    product_links = get_products_from_category(driver, URL)
+    try:
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
+        )
+    except:
+        print("⚠️ Sayfa yüklenemedi.")
+        driver.quit()
+        return
+
+    items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
+    print(f"🔍 {len(items)} ürün bulundu.")
 
     products = []
-    for product in product_links:
+    for item in items:
         try:
-            price = product.get("price")
+            if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
+                continue
+
+            asin = item.get_attribute("data-asin")
+            if not asin:
+                continue
+
+            title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
+            link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
+            image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
+
+            price = get_final_price(driver, item, link)
             if not price:
-                print(f"⚠️ Fiyat eksik, detay sayfaya geçiliyor: {product['title']}")
-                driver.get(product["link"])
-                WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-                time.sleep(2)
+                continue
 
-                try:
-                    el = driver.find_element(By.CSS_SELECTOR, ".a-price .a-offscreen")
-                    price = el.text.strip()
-                    if re.search(r"\d+,\d{2} TL", price):
-                        print(f"✅ Detay sayfada fiyat bulundu: {price}")
-                    else:
-                        print(f"⚠️ Detay sayfa fiyat format dışı: {price}")
-                        continue
-                except:
-                    print("⚠️ Detay sayfada fiyat bulunamadı.")
-                    continue
+            products.append({
+                "asin": asin,
+                "title": title,
+                "link": link,
+                "image": image,
+                "price": price
+            })
 
-            product["price"] = price
-            products.append(product)
         except Exception as e:
-            print("⚠️ Detay sayfa hatası:", e)
+            print("⚠️ Ürün parse hatası:", e)
             continue
 
     driver.quit()
-    print(f"✅ {len(products)} ürün detaydan başarıyla alındı.")
+    print(f"✅ {len(products)} ürün başarıyla alındı.")
 
     sent_data = load_sent_data()
     products_to_send = []
