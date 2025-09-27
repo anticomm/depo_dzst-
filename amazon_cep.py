@@ -217,10 +217,10 @@ def run():
         print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
     sent_data[asin] = price
 
-else:
-    print(f"🆕 Yeni ürün: {product['title']}")
-    products_to_send.append(product)
-    sent_data[asin] = price        
+    else:
+        print(f"🆕 Yeni ürün: {product['title']}")
+        products_to_send.append(product)
+        sent_data[asin] = price        
 
     if products_to_send:
         for p in products_to_send:
@@ -230,5 +230,5 @@ else:
     else:
         print("⚠️ Yeni veya indirimli ürün bulunamadı.")
 
-if __name__ == "__main__":
-    run()        
+    if __name__ == "__main__":
+        run()        
