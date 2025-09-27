@@ -85,7 +85,7 @@ def get_price_from_detail(driver, url):
     except Exception as e:
         print(f"⚠️ Detay sayfa hatası: {e}")
         return None
-        def load_sent_data():
+def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
         with open(SENT_FILE, "r", encoding="utf-8") as f:
@@ -223,4 +223,4 @@ def run():
         print("⚠️ Yeni veya indirimli ürün bulunamadı.")
 
 if __name__ == "__main__":
-    run()
+    run()        
