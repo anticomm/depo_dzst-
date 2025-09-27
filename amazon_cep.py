@@ -192,27 +192,35 @@ def run():
         asin = product["asin"]
         price = product["price"].strip()
 
-        if asin in sent_data:
-            old_price = sent_data[asin]
-            try:
-                old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
-                new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())
-            except:
-                print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
-                sent_data[asin] = price
-                continue
+if asin in sent_data:
+    old_price = sent_data[asin]
 
-            if new_val < old_val:
-                print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
-                product["old_price"] = old_price
-                products_to_send.append(product)
-            else:
-                print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
-            sent_data[asin] = price
-        else:
-            print(f"🆕 Yeni ürün: {product['title']}")
-            products_to_send.append(product)
-            sent_data[asin] = price
+    # Geçersiz eski fiyat varsa → yeni fiyatla güncelle ve karşılaştırma yapma
+    if "Fiyat alınamadı" in old_price or "Kargo BEDAVA" in old_price:
+        print(f"🆕 Önceki fiyat geçersizdi, güncellendi: {product['title']} → {price}")
+        sent_data[asin] = price
+        continue
+
+    try:
+        old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+        new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+    except:
+        print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
+        sent_data[asin] = price
+        continue
+
+    if new_val < old_val:
+        print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
+        product["old_price"] = old_price
+        products_to_send.append(product)
+    else:
+        print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
+    sent_data[asin] = price
+
+else:
+    print(f"🆕 Yeni ürün: {product['title']}")
+    products_to_send.append(product)
+    sent_data[asin] = price        
 
     if products_to_send:
         for p in products_to_send:
