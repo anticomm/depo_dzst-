@@ -9,11 +9,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from telegram_cep import send_message
 
-URL = "https://www.amazon.com.tr/s?i=computers&srs=44219324031&bbn=44219324031&rh=n%3A12466439031%2Cn%3A44219324031%2Cn%3A12601898031&s=price-asc-rank&dc&xpid=MGdG99m1J_z3v&ds=v1%3AnqKNlh0JTgPo6XL12e%2FMCM9%2BWOfaXFmNNCJ8eV5a6%2F0"
+URL = "https://www.amazon.com.tr/s?i=computers&srs=44219324031&bbn=44219324031&rh=n%3A12466439031%2Cn%3A44219324031%2Cn%3A12601898031&s=price-asc-rank"
 COOKIE_FILE = "cookie_cep.json"
 SENT_FILE = "send_products.txt"
 
@@ -58,83 +57,12 @@ def get_driver():
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/115 Safari/537.36")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-def get_price_from_detail(driver, url):
-    try:
-        driver.get(url)
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-        time.sleep(2)
-
-        price_selectors = [
-            "span.a-color-base",
-            "span.a-size-base.a-color-price.offer-price.a-text-normal",
-            ".aok-offscreen",
-            "span.a-price-whole"
-        ]
-
-        for selector in price_selectors:
-            price_elements = driver.find_elements(By.CSS_SELECTOR, selector)
-            for el in price_elements:
-                text = el.get_attribute("innerText").strip()
-
-                if (
-                    "\n" in text or
-                    "teklif" in text or
-                    "ile" in text or
-                    "Kargo BEDAVA" in text or
-                    "siparişlerde" in text or
-                    len(text) > 20
-                ):
-                    print(f"⚠️ Bozuk fiyat metni atlandı: {text}")
-                    continue
-
-                if not re.search(r"\d{1,3}(\.\d{3})*,\d{2} TL", text) and not re.search(r"\d+,\d{2} TL", text):
-                    print(f"⚠️ Format dışı fiyat atlandı: {text}")
-                    continue
-
-                print(f"✅ Sayfada fiyat bulundu: {text}")
-                return text
-
-        print("⚠️ Geçerli fiyat bulunamadı.")
-        return None
-
-    except Exception as e:
-        print(f"⚠️ Fiyat çekme hatası: {e}")
-        return None
-
-def load_sent_data():
-    data = {}
-    if os.path.exists(SENT_FILE):
-        with open(SENT_FILE, "r", encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split("|", 1)
-                if len(parts) == 2:
-                    asin, price = parts
-                    data[asin.strip()] = price.strip()
-    return data
-
-def save_sent_data(updated_data):
-    with open(SENT_FILE, "w", encoding="utf-8") as f:
-        for asin, price in updated_data.items():
-            f.write(f"{asin} | {price}\n")
-
-def run():
-    if not decode_cookie_from_env():
-        return
-
-    driver = get_driver()
-    driver.get(URL)
+def get_products_from_category(driver, url):
+    driver.get(url)
     time.sleep(2)
-    load_cookies(driver)
-    driver.get(URL)
-
-    try:
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
-        )
-    except:
-        print("⚠️ Sayfa yüklenemedi.")
-        driver.quit()
-        return
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
+    )
 
     items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
     print(f"🔍 {len(items)} ürün bulundu.")
@@ -163,12 +91,20 @@ def run():
             for selector in price_selectors:
                 try:
                     el = item.find_element(By.CSS_SELECTOR, selector)
-                    text = el.text.strip()
-                    if "TL" in text and any(char.isdigit() for char in text):
-                        if "Kargo BEDAVA" in text or "siparişlerde" in text:
-                            continue
-                        price = text
-                        break
+                    text = el.get_attribute("innerText").strip()
+                    text = text.replace("\n", "").replace("\r", "").replace("TL", " TL").strip()
+
+                    if any(x in text for x in ["Kargo", "teslimat", "puan", "teklif", "siparişlerde", "Yeni & İkinci El"]):
+                        print(f"⚠️ Bozuk fiyat metni atlandı: {text}")
+                        continue
+
+                    if not re.search(r"\d+,\d{2} TL", text):
+                        print(f"⚠️ Format dışı fiyat atlandı: {text}")
+                        continue
+
+                    print(f"✅ Sayfada fiyat bulundu: {text}")
+                    price = text
+                    break
                 except:
                     continue
 
@@ -184,14 +120,57 @@ def run():
             print("⚠️ Listeleme parse hatası:", e)
             continue
 
+    return product_links
+def load_sent_data():
+    data = {}
+    if os.path.exists(SENT_FILE):
+        with open(SENT_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split("|", 1)
+                if len(parts) == 2:
+                    asin, price = parts
+                    data[asin.strip()] = price.strip()
+    return data
+
+def save_sent_data(updated_data):
+    with open(SENT_FILE, "w", encoding="utf-8") as f:
+        for asin, price in updated_data.items():
+            f.write(f"{asin} | {price}\n")
+
+def run():
+    if not decode_cookie_from_env():
+        return
+
+    driver = get_driver()
+    driver.get(URL)
+    time.sleep(2)
+    load_cookies(driver)
+    driver.get(URL)
+
+    product_links = get_products_from_category(driver, URL)
+
     products = []
     for product in product_links:
         try:
             price = product.get("price")
             if not price:
-                price = get_price_from_detail(driver, product["link"])
-            if not price or "Fiyat alınamadı" in price or "Kargo BEDAVA" in price:
-                continue
+                print(f"⚠️ Fiyat eksik, detay sayfaya geçiliyor: {product['title']}")
+                driver.get(product["link"])
+                WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+                time.sleep(2)
+
+                try:
+                    el = driver.find_element(By.CSS_SELECTOR, ".a-price .a-offscreen")
+                    price = el.text.strip()
+                    if re.search(r"\d+,\d{2} TL", price):
+                        print(f"✅ Detay sayfada fiyat bulundu: {price}")
+                    else:
+                        print(f"⚠️ Detay sayfa fiyat format dışı: {price}")
+                        continue
+                except:
+                    print("⚠️ Detay sayfada fiyat bulunamadı.")
+                    continue
+
             product["price"] = price
             products.append(product)
         except Exception as e:
@@ -210,11 +189,6 @@ def run():
 
         if asin in sent_data:
             old_price = sent_data[asin]
-
-            if "Fiyat alınamadı" in old_price or "Kargo BEDAVA" in old_price:
-                print(f"🆕 Önceki fiyat geçersizdi, güncellendi: {product['title']} → {price}")
-                sent_data[asin] = price
-                continue
 
             try:
                 old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
