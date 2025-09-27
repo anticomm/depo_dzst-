@@ -63,7 +63,6 @@ def get_price_from_detail(driver, url):
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
 
-        # Diğer satın alma seçenekleri altında fiyat
         try:
             secenekler = driver.find_element(By.XPATH, "//span[contains(text(), 'Diğer satın alma seçenekleri')]")
             parent = secenekler.find_element(By.XPATH, "..")
@@ -75,7 +74,6 @@ def get_price_from_detail(driver, url):
         except:
             pass
 
-        # Sayfa üzerindeki klasik fiyat selektörleri
         price_selectors = [
             "span.a-color-base",
             "span.a-size-base.a-color-price.offer-price.a-text-normal",
@@ -91,7 +89,6 @@ def get_price_from_detail(driver, url):
                     print(f"✅ Sayfada fiyat bulundu: {text}")
                     return text
 
-        # Satın alma seçeneklerine geç
         try:
             offer_link = driver.find_element(By.CSS_SELECTOR, "a.a-button-text[title*='Satın Alma Seçeneklerini Gör']")
             offer_url = offer_link.get_attribute("href")
@@ -119,7 +116,6 @@ def get_price_from_detail(driver, url):
     except Exception as e:
         print(f"⚠️ Detay sayfa hatası: {e}")
         return None
-
 def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
@@ -203,32 +199,45 @@ def run():
             continue
 
     driver.quit()
+    print(f"✅ {len(products)} ürün detaydan başarıyla alındı.")
 
     sent_data = load_sent_data()
-products_to_send = []
+    products_to_send = []
 
-for product in products:
-    asin = product["asin"]
-    price = product["price"].strip()
+    for product in products:
+        asin = product["asin"]
+        price = product["price"].strip()
 
-    if asin in sent_data:
-        old_price = sent_data[asin]
-        try:
-            old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
-            new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())
-        except:
-            print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
+        if asin in sent_data:
+            old_price = sent_data[asin]
+            try:
+                old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+                new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+            except:
+                print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
+                sent_data[asin] = price
+                continue
+
+            if new_val < old_val:
+                print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
+                product["old_price"] = old_price
+                products_to_send.append(product)
+            else:
+                print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
             sent_data[asin] = price
-            continue
-
-        if new_val < old_val:
-            print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
-            product["old_price"] = old_price
-            products_to_send.append(product)
         else:
-            print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
-        sent_data[asin] = price
+            print(f"🆕 Yeni ürün: {product['title']}")
+            products_to_send.append(product)
+            sent_data[asin] = price
+
+    if products_to_send:
+        for p in products_to_send:
+            send_message(p)
+        save_sent_data(sent_data)
+        print(f"📁 Dosya güncellendi: {len(products_to_send)} ürün eklendi/güncellendi.")
     else:
-        print(f"🆕 Yeni ürün: {product['title']}")
-        products_to_send.append(product)
-        sent_data[asin] = price    
+        print("⚠️ Yeni veya indirimli ürün bulunamadı.")
+
+if __name__ == "__main__":
+    run()
+        
