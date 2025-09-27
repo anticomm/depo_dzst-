@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from telegram_cep import send_message
 
@@ -62,7 +63,7 @@ def get_price_from_detail(driver, url):
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
 
-        # 🔍 Diğer satın alma seçenekleri altında fiyat
+        # Diğer satın alma seçenekleri altında fiyat
         try:
             secenekler = driver.find_element(By.XPATH, "//span[contains(text(), 'Diğer satın alma seçenekleri')]")
             parent = secenekler.find_element(By.XPATH, "..")
@@ -74,7 +75,7 @@ def get_price_from_detail(driver, url):
         except:
             pass
 
-        # 🔍 Sayfa üzerindeki klasik fiyat selektörleri
+        # Sayfa üzerindeki klasik fiyat selektörleri
         price_selectors = [
             "span.a-color-base",
             "span.a-size-base.a-color-price.offer-price.a-text-normal",
@@ -90,7 +91,7 @@ def get_price_from_detail(driver, url):
                     print(f"✅ Sayfada fiyat bulundu: {text}")
                     return text
 
-        # 🔁 Satın alma seçeneklerine geç
+        # Satın alma seçeneklerine geç
         try:
             offer_link = driver.find_element(By.CSS_SELECTOR, "a.a-button-text[title*='Satın Alma Seçeneklerini Gör']")
             offer_url = offer_link.get_attribute("href")
@@ -118,8 +119,6 @@ def get_price_from_detail(driver, url):
     except Exception as e:
         print(f"⚠️ Detay sayfa hatası: {e}")
         return None
-
-
 
 def load_sent_data():
     data = {}
@@ -162,33 +161,32 @@ def run():
     product_links = []
     for item in items:
         try:
-           if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
-               continue
+            if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
+                continue
 
-           asin = item.get_attribute("data-asin")
-           title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
-           link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
-           image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
+            asin = item.get_attribute("data-asin")
+            title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
+            link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
+            image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
 
-           # 💰 Listeleme sayfasında fiyatı al
-           try:
-               whole = item.find_element(By.CLASS_NAME, "a-price-whole").text.strip()
-               fraction = item.find_element(By.CLASS_NAME, "a-price-fraction").text.strip()
-               price = f"{whole},{fraction} TL"
-           except:
-               price = None
+            try:
+                whole = item.find_element(By.CLASS_NAME, "a-price-whole").text.strip()
+                fraction = item.find_element(By.CLASS_NAME, "a-price-fraction").text.strip()
+                price = f"{whole},{fraction} TL"
+            except:
+                price = None
 
-           product_links.append({
-               "asin": asin,
-               "title": title,
-               "link": link,
-               "image": image,
-               "price": price
-           })
-           except Exception as e:
-               print("⚠️ Listeleme parse hatası:", e)
-               continue
+            product_links.append({
+                "asin": asin,
+                "title": title,
+                "link": link,
+                "image": image,
+                "price": price
+            })
 
+        except Exception as e:
+            print("⚠️ Listeleme parse hatası:", e)
+            continue
 
     products = []
     for product in product_links:
@@ -222,25 +220,4 @@ def run():
                     print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
                     product["old_price"] = old_price
                     products_to_send.append(product)
-                else:
-                    print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
-                # Her durumda son fiyatı güncelle
-                sent_data[asin] = price
-            except:
-                print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
-                sent_data[asin] = price
-        else:
-            print(f"🆕 Yeni ürün: {product['title']}")
-            products_to_send.append(product)
-            sent_data[asin] = price
-
-    if products_to_send:
-        for p in products_to_send:
-            send_message(p)
-        save_sent_data(sent_data)
-        print(f"📁 Dosya güncellendi: {len(products_to_send)} ürün eklendi/güncellendi.")
-    else:
-        print("⚠️ Yeni veya indirimli ürün bulunamadı.")
-
-if __name__ == "__main__":
-    run()
+                else
