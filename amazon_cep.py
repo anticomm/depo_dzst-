@@ -63,17 +63,6 @@ def get_price_from_detail(driver, url):
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
 
-        try:
-            secenekler = driver.find_element(By.XPATH, "//span[contains(text(), 'Diğer satın alma seçenekleri')]")
-            parent = secenekler.find_element(By.XPATH, "..")
-            fiyat_span = parent.find_element(By.CSS_SELECTOR, "span.a-color-base")
-            fiyat = fiyat_span.text.strip()
-            if "TL" in fiyat and any(char.isdigit() for char in fiyat):
-                print(f"✅ Diğer satın alma seçenekleri altında fiyat bulundu: {fiyat}")
-                return fiyat
-        except:
-            pass
-
         price_selectors = [
             "span.a-color-base",
             "span.a-size-base.a-color-price.offer-price.a-text-normal",
@@ -86,37 +75,17 @@ def get_price_from_detail(driver, url):
             for el in price_elements:
                 text = el.get_attribute("innerText").strip()
                 if "TL" in text and any(char.isdigit() for char in text):
+                    if "Kargo BEDAVA" in text or "siparişlerde" in text:
+                        continue
                     print(f"✅ Sayfada fiyat bulundu: {text}")
                     return text
-
-        try:
-            offer_link = driver.find_element(By.CSS_SELECTOR, "a.a-button-text[title*='Satın Alma Seçeneklerini Gör']")
-            offer_url = offer_link.get_attribute("href")
-            if offer_url:
-                if offer_url.startswith("/"):
-                    offer_url = "https://www.amazon.com.tr" + offer_url
-                driver.get(offer_url)
-                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-                time.sleep(1)
-
-                for selector in price_selectors:
-                    offer_prices = driver.find_elements(By.CSS_SELECTOR, selector)
-                    for el in offer_prices:
-                        text = el.get_attribute("innerText").strip()
-                        if "TL" in text and any(char.isdigit() for char in text):
-                            print(f"✅ Satın alma sayfasında fiyat bulundu: {text}")
-                            return text
-        except NoSuchElementException:
-            print("⏩ Satın alma butonu yok, ürün atlandı.")
-        except Exception as e:
-            print(f"⚠️ Satın alma sayfası hatası: {e}")
 
         print("❌ Fiyat alınamadı.")
         return None
     except Exception as e:
         print(f"⚠️ Detay sayfa hatası: {e}")
         return None
-def load_sent_data():
+        def load_sent_data():
     data = {}
     if os.path.exists(SENT_FILE):
         with open(SENT_FILE, "r", encoding="utf-8") as f:
@@ -154,6 +123,12 @@ def run():
     items = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
     print(f"🔍 {len(items)} ürün bulundu.")
 
+    price_selectors = [
+        ".a-price .a-offscreen",
+        "span.a-color-base",
+        "span.a-price-whole"
+    ]
+
     product_links = []
     for item in items:
         try:
@@ -161,16 +136,25 @@ def run():
                 continue
 
             asin = item.get_attribute("data-asin")
+            if not asin:
+                continue
+
             title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
             link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
             image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
 
-            try:
-                whole = item.find_element(By.CLASS_NAME, "a-price-whole").text.strip()
-                fraction = item.find_element(By.CLASS_NAME, "a-price-fraction").text.strip()
-                price = f"{whole},{fraction} TL"
-            except:
-                price = None
+            price = None
+            for selector in price_selectors:
+                try:
+                    el = item.find_element(By.CSS_SELECTOR, selector)
+                    text = el.text.strip()
+                    if "TL" in text and any(char.isdigit() for char in text):
+                        if "Kargo BEDAVA" in text or "siparişlerde" in text:
+                            continue
+                        price = text
+                        break
+                except:
+                    continue
 
             product_links.append({
                 "asin": asin,
@@ -190,7 +174,7 @@ def run():
             price = product.get("price")
             if not price:
                 price = get_price_from_detail(driver, product["link"])
-            if not price or "Fiyat alınamadı" in price:
+            if not price or "Fiyat alınamadı" in price or "Kargo BEDAVA" in price:
                 continue
             product["price"] = price
             products.append(product)
@@ -240,4 +224,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-        
