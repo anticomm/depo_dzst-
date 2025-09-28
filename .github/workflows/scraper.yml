@@ -43,8 +43,8 @@ jobs:
           git pull origin master --rebase || echo "⏩ Pull başarısız, devam ediliyor"
           git push
 
-      - name: 30 saniye bekle
-        run: sleep 30
+      - name: 45 saniye bekle
+        run: sleep 45
 
       - name: Scraper B'yi tetikle
         run: |
