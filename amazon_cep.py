@@ -115,8 +115,8 @@ def get_used_price_if_available(driver):
         price = price_element.text.strip()
         print(f"📦 İkinci El Fiyat bulundu: {price}")
         return price
-    except Exception as e:
-        print(f"⛔ İkinci El fiyat bloğu bulunamadı: {e}")
+    except:
+        print("⛔ İkinci El fiyat bloğu bulunamadı")
         return None
 
 def get_final_price(driver, link):
