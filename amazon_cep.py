@@ -150,6 +150,8 @@ def get_final_price(driver, link):
         """)
         price = extract_price_from_selectors(driver, price_selectors_detail)
         if price:
+            if DEBUG:
+                print("📄 Fiyat detay sayfadan alındı")
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
             return price
@@ -161,6 +163,8 @@ def get_final_price(driver, link):
             time.sleep(2)
             price = extract_price_from_selectors(driver, price_selectors_offer)
             if price:
+                if DEBUG:
+                    print("📄 Fiyat detay sayfadan alındı (offer-listing)")
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
                 return price
