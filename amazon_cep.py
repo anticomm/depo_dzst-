@@ -116,9 +116,9 @@ def get_used_price_if_available(driver):
         
         return price
     except:
-    if DEBUG: 
-        print("⛔ İkinci El fiyat bloğu bulunamadı")
-        return None
+        if DEBUG: 
+            print("⛔ İkinci El fiyat bloğu bulunamadı")
+            return None
 
 def get_final_price(driver, link):
     price_selectors_detail = [
