@@ -136,7 +136,7 @@ def get_final_price(driver, link):
         driver.execute_script("window.open('');")
         driver.switch_to.window(driver.window_handles[1])
         driver.get(link)
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
         time.sleep(2)
         driver.execute_script("""
           document.querySelectorAll("h2.a-carousel-heading").forEach(h => {
@@ -153,7 +153,7 @@ def get_final_price(driver, link):
         offer_link = get_offer_listing_link(driver)
         if offer_link:
             driver.get(offer_link)
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
             time.sleep(2)
             price = extract_price_from_selectors(driver, price_selectors_offer)
             if price:
