@@ -3,6 +3,7 @@ import json
 import time
 import base64
 import re
+DEBUG = False  # veya True, test modundaysan
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
