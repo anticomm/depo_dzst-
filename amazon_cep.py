@@ -113,9 +113,10 @@ def get_used_price_if_available(driver):
         )
         price_element = container.find_element(By.CLASS_NAME, "offer-price")
         price = price_element.text.strip()
-        print(f"📦 İkinci El Fiyat bulundu: {price}")
+        
         return price
     except:
+    if DEBUG: 
         print("⛔ İkinci El fiyat bloğu bulunamadı")
         return None
 
