@@ -114,7 +114,9 @@ def get_used_price_if_available(driver):
         )
         price_element = container.find_element(By.CLASS_NAME, "offer-price")
         price = price_element.text.strip()
-        
+        if DEBUG:
+            print("📄 Fiyat kategori sayfasından alındı")
+
         return price
     except:
         if DEBUG: 
