@@ -218,7 +218,7 @@ def run():
         return
 
     try:
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
         )
     except:
