@@ -126,7 +126,6 @@ def run():
     driver.get(URL)
     time.sleep(2)
     load_cookies(driver)
-    scroll_page(driver)
     try:
         WebDriverWait(driver, 35).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
@@ -135,7 +134,7 @@ def run():
         print("⚠️ Sayfa yüklenemedi.")
         driver.quit()
         return
-
+    scroll_page(driver)
     driver.execute_script("""
       document.querySelectorAll("h5.a-carousel-heading").forEach(h => {
         let box = h.closest("div");
