@@ -126,6 +126,7 @@ def run():
     driver.get(URL)
     time.sleep(2)
     load_cookies(driver)
+    driver.get(URL)
     try:
         WebDriverWait(driver, 35).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
