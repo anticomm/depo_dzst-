@@ -124,6 +124,7 @@ def run():
 
     driver = get_driver()
     driver.get(URL)
+    time.sleep(2)
     load_cookies(driver)
     scroll_page(driver)
     try:
