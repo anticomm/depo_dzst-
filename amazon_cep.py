@@ -123,8 +123,8 @@ def run():
         return
 
     driver = get_driver()
-    load_cookies(driver)
     driver.get(URL)
+    load_cookies(driver)
     scroll_page(driver)
     try:
         WebDriverWait(driver, 35).until(
