@@ -122,9 +122,9 @@ def run():
     driver = get_driver()
     load_cookies(driver)
     driver.get(URL)
-
+    scroll_page(driver)
     try:
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 35).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-component-type='s-search-result']"))
         )
     except:
