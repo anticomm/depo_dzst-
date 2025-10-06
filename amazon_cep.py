@@ -56,7 +56,10 @@ def get_driver():
     options.add_argument("--window-size=1920,1080")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/115 Safari/537.36")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
+def scroll_page(driver, pause=1.5, steps=5):
+    for _ in range(steps):
+        driver.execute_script("window.scrollBy(0, 1000);")
+        time.sleep(pause)
 def get_used_price_from_item(item):
     try:
         container = item.find_element(
