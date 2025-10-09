@@ -1,3 +1,5 @@
+import time, os, requests
+start = time.time()
 import os
 import json
 import time
@@ -32,6 +34,7 @@ def decode_cookie_from_env():
         return False
 
 def load_cookies(driver):
+    check_timeout()
     if not os.path.exists(COOKIE_FILE):
         print("❌ Cookie dosyası eksik.")
         return
@@ -47,8 +50,24 @@ def load_cookies(driver):
             })
         except Exception as e:
             print(f"⚠️ Cookie eklenemedi: {cookie.get('name')} → {e}")
-
+def check_timeout():
+    if time.time() - start > 180:
+        print("⏱️ Süre doldu, zincir devam ediyor.")
+        try:
+            requests.post(
+                "https://api.github.com/repos/anticomm/depo_dzst-/actions/workflows/scraperb.yml/dispatches",
+                headers={
+                    "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+                    "Accept": "application/vnd.github.v3+json"
+                },
+                json={"ref": "master"}
+            )
+            print("📡 Scraper B tetiklendi.")
+        except Exception as e:
+            print(f"❌ Scraper B tetiklenemedi: {e}")
+        exit()
 def get_driver():
+    check_timeout()
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
@@ -103,6 +122,7 @@ def get_final_price(driver, link):
         return None
 
 def load_sent_data():
+    check_timeout()
     data = {}
     if os.path.exists(SENT_FILE):
         with open(SENT_FILE, "r", encoding="utf-8") as f:
@@ -119,6 +139,7 @@ def save_sent_data(updated_data):
             f.write(f"{asin} | {price}\n")
 
 def run():
+    check_timeout()
     if not decode_cookie_from_env():
         return
 
@@ -147,6 +168,7 @@ def run():
     print(f"🔍 {len(items)} ürün bulundu.")
     products = []
     for item in items:
+        check_timeout()
         try:
             if item.find_elements(By.XPATH, ".//span[contains(text(), 'Sponsorlu')]"):
                 continue
