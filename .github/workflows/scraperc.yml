@@ -43,6 +43,7 @@ jobs:
       
       - name: Scraper C'yi çalıştır
         run: |
+          export DISPLAY=:99
           python amazon_cep.py || echo "⚠️ Scraper C hata verdi ama zincir devam ediyor"
 
       - name: Değişiklikleri commit et ve pushla
