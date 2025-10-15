@@ -50,6 +50,8 @@ def load_epey_cookies(driver):
 
 def get_driver():
     try:
+        import os
+        os.environ["DISPLAY"] = ":99"
         path = ChromeDriverManager().install()
         print(f"🧪 Chrome driver path: {path}")
         options = Options()
