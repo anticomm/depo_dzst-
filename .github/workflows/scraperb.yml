@@ -40,8 +40,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb
           Xvfb :99 & export DISPLAY=:99
+      
       - name: Scraper B'yi çalıştır
         run: |
+          export DISPLAY=:99
           python amazon_cep.py || echo "⚠️ Scraper B hata verdi ama zincir devam ediyor"
 
       - name: Değişiklikleri commit et ve pushla
