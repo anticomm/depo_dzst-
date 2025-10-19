@@ -68,5 +68,5 @@ jobs:
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/anticomm/depo_dzst/actions/workflows/scraperb.yml/dispatches \
+            https://api.github.com/repos/anticomm/depo_dzst-/actions/workflows/scraperb.yml/dispatches \
             -d '{"ref":"master"}' || echo "⚠️ Scraper B tetiklenemedi ama zincir devam ediyor"
